@@ -10,6 +10,7 @@ export interface ProfileWithTargets {
     sex: Sex;
     heightCm: number;
     weightKg: number;
+    targetWeightKg: number | null;
     activityLevel: ActivityLevel;
     goal: Goal;
     createdAt: Date;
@@ -48,6 +49,7 @@ export class ProfileService {
         sex: profile.sex as Sex,
         heightCm: profile.heightCm,
         weightKg: profile.weightKg,
+        targetWeightKg: profile.targetWeightKg,
         activityLevel: profile.activityLevel as ActivityLevel,
         goal: profile.goal as Goal,
         createdAt: profile.createdAt,
@@ -69,6 +71,7 @@ export class ProfileService {
         sex: data.sex,
         heightCm: data.heightCm,
         weightKg: data.weightKg,
+        targetWeightKg: data.targetWeightKg ?? null,
         activityLevel: data.activityLevel,
         goal: data.goal,
       },
@@ -77,6 +80,7 @@ export class ProfileService {
         sex: data.sex,
         heightCm: data.heightCm,
         weightKg: data.weightKg,
+        targetWeightKg: data.targetWeightKg !== undefined ? data.targetWeightKg : undefined,
         activityLevel: data.activityLevel,
         goal: data.goal,
       },
@@ -99,6 +103,7 @@ export class ProfileService {
         sex: profile.sex as Sex,
         heightCm: profile.heightCm,
         weightKg: profile.weightKg,
+        targetWeightKg: profile.targetWeightKg,
         activityLevel: profile.activityLevel as ActivityLevel,
         goal: profile.goal as Goal,
         createdAt: profile.createdAt,

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { GoogleSignInButton } from '../components/GoogleSignInButton';
 import { Eye, EyeOff, Lock, Mail, User as UserIcon, AlertCircle, Loader2, ArrowRight } from 'lucide-react';
 
 export default function RegisterPage(): React.JSX.Element {
@@ -15,18 +16,18 @@ export default function RegisterPage(): React.JSX.Element {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
+  // Password strength checklist
+  const hasMinLength = password.length >= 8;
+  const hasNumber = /\d/.test(password);
+  const hasSpecialChar = /[^A-Za-z0-9]/.test(password);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormError(null);
 
-    // Client-side validations
+    // Client-side validation
     if (!name.trim()) {
       setFormError('Please enter your full name');
-      return;
-    }
-
-    if (name.trim().length < 2) {
-      setFormError('Name must be at least 2 characters long');
       return;
     }
 
@@ -35,13 +36,8 @@ export default function RegisterPage(): React.JSX.Element {
       return;
     }
 
-    if (!password) {
-      setFormError('Please enter a password');
-      return;
-    }
-
-    if (password.length < 8) {
-      setFormError('Password must be at least 8 characters long');
+    if (!hasMinLength || !hasNumber || !hasSpecialChar) {
+      setFormError('Password does not meet the security requirements');
       return;
     }
 
@@ -86,6 +82,22 @@ export default function RegisterPage(): React.JSX.Element {
               <span>{formError}</span>
             </div>
           )}
+
+          {/* Google Sign Up */}
+          <div className="mb-6">
+            <GoogleSignInButton text="signup_with" redirectTo="/dashboard" />
+          </div>
+
+          <div className="relative mb-6">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-slate-800" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-slate-900 px-3 text-slate-400 font-semibold">
+                Or register with email
+              </span>
+            </div>
+          </div>
 
           <form onSubmit={handleSubmit} className="space-y-4" noValidate>
             <div>

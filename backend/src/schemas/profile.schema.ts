@@ -17,6 +17,12 @@ export const profileSchema = z.object({
     .number({ required_error: 'Weight in kg is required' })
     .min(20, 'Weight must be at least 20 kg')
     .max(500, 'Weight cannot exceed 500 kg'),
+  targetWeightKg: z
+    .number()
+    .min(20, 'Target weight must be at least 20 kg')
+    .max(500, 'Target weight cannot exceed 500 kg')
+    .optional()
+    .nullable(),
   activityLevel: z.enum(
     [
       'sedentary',

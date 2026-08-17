@@ -1,16 +1,35 @@
 import { Router } from 'express';
-import { register, login, getMe } from '../controllers/auth.controller';
+import {
+  register,
+  login,
+  googleLogin,
+  refresh,
+  logout,
+  logoutAll,
+  getSessions,
+  revokeSession,
+  getMe,
+} from '../controllers/auth.controller';
 import { authenticateToken } from '../middleware/auth.middleware';
+import {
+  loginRateLimiter,
+  registerRateLimiter,
+  refreshRateLimiter,
+} from '../middleware/rate-limit.middleware';
 
 const router = Router();
 
-// POST /api/auth/register
-router.post('/register', register);
+// Public Authentication Endpoints (Rate Limited)
+router.post('/register', registerRateLimiter, register);
+router.post('/login', loginRateLimiter, login);
+router.post('/google', loginRateLimiter, googleLogin);
+router.post('/refresh', refreshRateLimiter, refresh);
+router.post('/logout', logout);
 
-// POST /api/auth/login
-router.post('/login', login);
-
-// GET /api/auth/me (Protected by JWT Bearer token)
+// Protected Authentication & Session Endpoints
 router.get('/me', authenticateToken, getMe);
+router.post('/logout-all', authenticateToken, logoutAll);
+router.get('/sessions', authenticateToken, getSessions);
+router.delete('/sessions/:id', authenticateToken, revokeSession);
 
 export default router;

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { GoogleSignInButton } from '../components/GoogleSignInButton';
 import { Eye, EyeOff, Lock, Mail, AlertCircle, Loader2, ArrowRight } from 'lucide-react';
 
 export default function LoginPage(): React.JSX.Element {
@@ -67,6 +68,22 @@ export default function LoginPage(): React.JSX.Element {
               <span>{formError}</span>
             </div>
           )}
+
+          {/* Google Sign In */}
+          <div className="mb-6">
+            <GoogleSignInButton text="signin_with" redirectTo={from} />
+          </div>
+
+          <div className="relative mb-6">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-slate-800" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-slate-900 px-3 text-slate-400 font-semibold">
+                Or continue with email
+              </span>
+            </div>
+          </div>
 
           <form onSubmit={handleSubmit} className="space-y-5" noValidate>
             <div>

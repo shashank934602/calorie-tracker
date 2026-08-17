@@ -1,18 +1,23 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { 
   User, 
   ProfileWithTargets, 
   Sex, 
   ActivityLevel, 
   Goal, 
+  SessionInfo,
   registerApi, 
   loginApi, 
-  getMeApi, 
+  googleAuthApi,
+  refreshTokenApi,
+  logoutApi,
+  logoutAllApi,
+  getSessionsApi,
+  revokeSessionApi,
   getProfileApi, 
-  updateProfileApi 
+  updateProfileApi,
+  registerAuthCallbacks
 } from '../services/api';
-
-const TOKEN_KEY = 'calorietrack_token';
 
 interface AuthContextType {
   user: User | null;
@@ -22,16 +27,22 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
+  sessions: SessionInfo[];
   login: (email: string, password: string) => Promise<void>;
+  loginWithGoogle: (idToken: string) => Promise<void>;
   register: (name: string, email: string, password: string) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
+  logoutAll: () => Promise<void>;
   clearError: () => void;
   refreshProfile: () => Promise<void>;
+  refreshSessions: () => Promise<void>;
+  revokeSession: (sessionId: string) => Promise<void>;
   saveProfile: (data: {
     age: number;
     sex: Sex;
     heightCm: number;
     weightKg: number;
+    targetWeightKg?: number | null;
     activityLevel: ActivityLevel;
     goal: Goal;
   }) => Promise<ProfileWithTargets>;
@@ -40,21 +51,18 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  // In-memory access token storage (NEVER in localStorage)
   const [user, setUser] = useState<User | null>(null);
-  const [token, setToken] = useState<string | null>(() => localStorage.getItem(TOKEN_KEY));
+  const [token, setToken] = useState<string | null>(null);
   const [profileData, setProfileData] = useState<ProfileWithTargets | null>(null);
+  const [sessions, setSessions] = useState<SessionInfo[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-  const clearError = useCallback(() => {
-    setError(null);
-  }, []);
+  // Single-flight refresh token mutex
+  const refreshPromiseRef = useRef<Promise<string | null> | null>(null);
 
-  const logout = useCallback(() => {
-    localStorage.removeItem(TOKEN_KEY);
-    setToken(null);
-    setUser(null);
-    setProfileData(null);
+  const clearError = useCallback(() => {
     setError(null);
   }, []);
 
@@ -68,60 +76,139 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [token]);
 
-  // Hydrate auth & profile state on initial mount
-  useEffect(() => {
-    const initAuth = async () => {
-      const storedToken = localStorage.getItem(TOKEN_KEY);
-      if (!storedToken) {
-        setIsLoading(false);
-        return;
-      }
+  const refreshSessions = useCallback(async (): Promise<void> => {
+    if (!token) return;
+    try {
+      const list = await getSessionsApi(token);
+      setSessions(list);
+    } catch (err) {
+      console.warn('Failed to fetch sessions:', err);
+    }
+  }, [token]);
 
+  /**
+   * Single-flight silent session restoration
+   */
+  const silentRefresh = useCallback(async (): Promise<string | null> => {
+    if (refreshPromiseRef.current) {
+      return refreshPromiseRef.current;
+    }
+
+    refreshPromiseRef.current = (async () => {
       try {
-        const currentUser = await getMeApi(storedToken);
-        setUser(currentUser);
-        setToken(storedToken);
+        const data = await refreshTokenApi();
+        const newAccessToken = data.accessToken || data.token || null;
+        setToken(newAccessToken);
+        setUser(data.user);
 
-        // Fetch profile data
-        try {
-          const userProfile = await getProfileApi(storedToken);
-          setProfileData(userProfile);
-        } catch (profileErr) {
-          console.warn('No existing profile or error fetching profile:', profileErr);
-          setProfileData(null);
+        // Hydrate profile data
+        if (newAccessToken) {
+          try {
+            const userProfile = await getProfileApi(newAccessToken);
+            setProfileData(userProfile);
+          } catch {
+            setProfileData(null);
+          }
         }
+        return newAccessToken;
       } catch (err) {
-        console.warn('Session expired or invalid token:', err);
-        localStorage.removeItem(TOKEN_KEY);
         setToken(null);
         setUser(null);
         setProfileData(null);
+        return null;
+      } finally {
+        refreshPromiseRef.current = null;
+      }
+    })();
+
+    return refreshPromiseRef.current;
+  }, []);
+
+  // Register global single-flight callbacks
+  useEffect(() => {
+    registerAuthCallbacks({
+      onTokenUpdated: (newToken: string) => {
+        setToken(newToken);
+      },
+      onSessionExpired: () => {
+        setToken(null);
+        setUser(null);
+        setProfileData(null);
+        setSessions([]);
+      },
+    });
+  }, []);
+
+  // Hydrate auth & profile state on initial app load via HttpOnly refresh cookie
+  useEffect(() => {
+    const initAuth = async () => {
+      try {
+        await silentRefresh();
       } finally {
         setIsLoading(false);
       }
     };
 
     initAuth();
-  }, []);
+  }, [silentRefresh]);
 
   const login = async (email: string, password: string): Promise<void> => {
     setIsLoading(true);
     setError(null);
     try {
       const data = await loginApi({ email, password });
-      localStorage.setItem(TOKEN_KEY, data.token);
-      setToken(data.token);
+      const newAccessToken = data.accessToken || data.token || null;
+      setToken(newAccessToken);
       setUser(data.user);
 
       // Fetch user profile on login
-      try {
-        const userProfile = await getProfileApi(data.token);
-        setProfileData(userProfile);
-      } catch {
-        setProfileData(null);
+      if (newAccessToken) {
+        try {
+          const userProfile = await getProfileApi(newAccessToken);
+          setProfileData(userProfile);
+        } catch {
+          setProfileData(null);
+        }
       }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Login failed';
+      setError(message);
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const loginWithGoogle = async (idToken: string): Promise<void> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      if (import.meta.env.DEV) {
+        console.log('[GoogleAuth Frontend DEBUG] AuthContext.loginWithGoogle initiated.');
+      }
+      const data = await googleAuthApi({ idToken });
+      const newAccessToken = data.accessToken || data.token || null;
+      setToken(newAccessToken);
+      setUser(data.user);
+
+      if (import.meta.env.DEV) {
+        console.log('[GoogleAuth Frontend DEBUG] Authenticated user received:', data.user.email);
+      }
+
+      // Hydrate profile data for Google authenticated user
+      if (newAccessToken) {
+        try {
+          const userProfile = await getProfileApi(newAccessToken);
+          setProfileData(userProfile);
+        } catch {
+          setProfileData(null);
+        }
+      }
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Google authentication failed';
+      if (import.meta.env.DEV) {
+        console.error('[GoogleAuth Frontend DEBUG] AuthContext.loginWithGoogle error:', message);
+      }
       setError(message);
       throw err;
     } finally {
@@ -134,8 +221,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setError(null);
     try {
       const data = await registerApi({ name, email, password });
-      localStorage.setItem(TOKEN_KEY, data.token);
-      setToken(data.token);
+      const newAccessToken = data.accessToken || data.token || null;
+      setToken(newAccessToken);
       setUser(data.user);
       setProfileData(null); // Fresh registration has no profile yet
     } catch (err: unknown) {
@@ -147,11 +234,43 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const logout = async (): Promise<void> => {
+    try {
+      await logoutApi();
+    } finally {
+      setToken(null);
+      setUser(null);
+      setProfileData(null);
+      setSessions([]);
+      setError(null);
+    }
+  };
+
+  const logoutAll = async (): Promise<void> => {
+    if (!token) return;
+    try {
+      await logoutAllApi(token);
+    } finally {
+      setToken(null);
+      setUser(null);
+      setProfileData(null);
+      setSessions([]);
+      setError(null);
+    }
+  };
+
+  const revokeSession = async (sessionIdToRevoke: string): Promise<void> => {
+    if (!token) return;
+    await revokeSessionApi(token, sessionIdToRevoke);
+    await refreshSessions();
+  };
+
   const saveProfile = async (data: {
     age: number;
     sex: Sex;
     heightCm: number;
     weightKg: number;
+    targetWeightKg?: number | null;
     activityLevel: ActivityLevel;
     goal: Goal;
   }): Promise<ProfileWithTargets> => {
@@ -178,11 +297,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     isAuthenticated: !!user && !!token,
     isLoading,
     error,
+    sessions,
     login,
+    loginWithGoogle,
     register,
     logout,
+    logoutAll,
     clearError,
     refreshProfile,
+    refreshSessions,
+    revokeSession,
     saveProfile,
   };
 

@@ -1,11 +1,11 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { env } from '../config/env';
-import { JwtPayload } from '../services/auth.service';
+import { JwtAccessTokenPayload } from '../services/token.service';
 
-// Extend Express Request type to include authenticated user
+// Extend Express Request type to include authenticated user payload
 export interface AuthenticatedRequest extends Request {
-  user?: JwtPayload;
+  user?: JwtAccessTokenPayload;
 }
 
 export const authenticateToken = (
@@ -14,11 +14,12 @@ export const authenticateToken = (
   next: NextFunction
 ): void => {
   const authHeader = req.headers['authorization'];
-  
+
   if (!authHeader) {
     res.status(401).json({
       status: 'error',
       message: 'Authorization header is required (Format: Bearer <token>)',
+      code: 'AUTH_HEADER_MISSING',
     });
     return;
   }
@@ -28,6 +29,7 @@ export const authenticateToken = (
     res.status(401).json({
       status: 'error',
       message: 'Invalid authorization format (Format: Bearer <token>)',
+      code: 'AUTH_FORMAT_INVALID',
     });
     return;
   }
@@ -35,14 +37,14 @@ export const authenticateToken = (
   const token = parts[1];
 
   try {
-    const decoded = jwt.verify(token, env.JWT_SECRET) as JwtPayload;
+    const decoded = jwt.verify(token, env.JWT_SECRET) as JwtAccessTokenPayload;
     req.user = decoded;
     next();
   } catch (err: unknown) {
     if (err instanceof jwt.TokenExpiredError) {
       res.status(401).json({
         status: 'error',
-        message: 'Authentication token has expired. Please log in again.',
+        message: 'Authentication access token has expired.',
         code: 'TOKEN_EXPIRED',
       });
       return;
@@ -50,7 +52,7 @@ export const authenticateToken = (
 
     res.status(401).json({
       status: 'error',
-      message: 'Invalid authentication token.',
+      message: 'Invalid authentication access token.',
       code: 'TOKEN_INVALID',
     });
     return;

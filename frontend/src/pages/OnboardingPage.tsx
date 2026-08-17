@@ -23,6 +23,7 @@ export default function OnboardingPage(): React.JSX.Element {
   const [sex, setSex] = useState<Sex>('male');
   const [heightCm, setHeightCm] = useState<number>(175);
   const [weightKg, setWeightKg] = useState<number>(75);
+  const [targetWeightKg, setTargetWeightKg] = useState<number | ''>('');
   const [activityLevel, setActivityLevel] = useState<ActivityLevel>('moderately_active');
   const [goal, setGoal] = useState<Goal>('maintain_weight');
 
@@ -97,6 +98,7 @@ export default function OnboardingPage(): React.JSX.Element {
         sex,
         heightCm,
         weightKg,
+        targetWeightKg: targetWeightKg ? Number(targetWeightKg) : undefined,
         activityLevel,
         goal,
       });
@@ -225,11 +227,11 @@ export default function OnboardingPage(): React.JSX.Element {
                   />
                 </div>
 
-                {/* Weight */}
+                {/* Current Weight */}
                 <div>
                   <label htmlFor="weight" className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2 flex items-center gap-1.5">
                     <Scale className="w-3.5 h-3.5 text-slate-400" />
-                    Weight (kg)
+                    Current Weight (kg)
                   </label>
                   <input
                     id="weight"
@@ -241,6 +243,33 @@ export default function OnboardingPage(): React.JSX.Element {
                     onChange={(e) => setWeightKg(Number(e.target.value))}
                     className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500 text-sm"
                     required
+                  />
+                </div>
+
+                {/* Target Weight (Optional) */}
+                <div className="sm:col-span-2 pt-2 border-t border-slate-800/80">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label htmlFor="targetWeight" className="block text-xs font-semibold text-sky-400 uppercase tracking-wider">
+                      Goal Target Weight (kg) — Optional
+                    </label>
+                    <span className="text-[11px] text-slate-400">
+                      {goal === 'lose_weight'
+                        ? 'Normally below current weight'
+                        : goal === 'gain_weight'
+                        ? 'Normally above current weight'
+                        : 'Optional maintenance target'}
+                    </span>
+                  </div>
+                  <input
+                    id="targetWeight"
+                    type="number"
+                    min="20"
+                    max="500"
+                    step="0.1"
+                    placeholder={`e.g. ${goal === 'lose_weight' ? (weightKg ? weightKg - 5 : 70) : goal === 'gain_weight' ? (weightKg ? weightKg + 5 : 80) : weightKg || 75} kg`}
+                    value={targetWeightKg}
+                    onChange={(e) => setTargetWeightKg(e.target.value ? Number(e.target.value) : '')}
+                    className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500/40 focus:border-sky-500 text-sm"
                   />
                 </div>
               </div>

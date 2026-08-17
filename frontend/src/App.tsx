@@ -8,6 +8,11 @@ import RegisterPage from './pages/RegisterPage';
 import DashboardPage from './pages/DashboardPage';
 import OnboardingPage from './pages/OnboardingPage';
 import ProfilePage from './pages/ProfilePage';
+import FoodDatabasePage from './pages/FoodDatabasePage';
+import ProgressPage from './pages/ProgressPage';
+import AiFoodLogPage from './pages/AiFoodLogPage';
+import AnalyticsPage from './pages/AnalyticsPage';
+import AiCoachPage from './pages/AiCoachPage';
 
 export default function App(): React.JSX.Element {
   return (
@@ -54,6 +59,46 @@ export default function App(): React.JSX.Element {
             element={
               <ProtectedRoute>
                 <ProfilePage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/food"
+            element={
+              <ProtectedRoute>
+                <FoodDatabasePage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/progress"
+            element={
+              <ProtectedRoute>
+                <ProgressPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/ai-log"
+            element={
+              <ProtectedRoute>
+                <AiFoodLogPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/analytics"
+            element={
+              <ProtectedRoute>
+                <AnalyticsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/coach"
+            element={
+              <ProtectedRoute>
+                <AiCoachPage />
               </ProtectedRoute>
             }
           />

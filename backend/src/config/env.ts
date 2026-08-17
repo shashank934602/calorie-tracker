@@ -11,7 +11,16 @@ const envSchema = z.object({
   CORS_ORIGIN: z.string().default('http://localhost:5173'),
   DATABASE_URL: z.string().min(1, 'DATABASE_URL is required'),
   JWT_SECRET: z.string().min(16, 'JWT_SECRET must be at least 16 characters long'),
-  JWT_EXPIRES_IN: z.string().default('7d'),
+  JWT_ACCESS_EXPIRES_IN: z.string().default('15m'),
+  REFRESH_TOKEN_EXPIRES_DAYS: z.coerce.number().default(30),
+  GEMINI_API_KEY: z.string().optional().default(''),
+  GEMINI_MODEL: z.string().default('gemini-3.5-flash'),
+  GOOGLE_CLIENT_ID: z.string().optional().default(''),
+  TRUST_PROXY: z
+    .string()
+    .optional()
+    .transform((val) => val === 'true' || val === '1'),
+  COOKIE_SAME_SITE: z.enum(['lax', 'none', 'strict']).optional(),
 });
 
 // Validate process.env
