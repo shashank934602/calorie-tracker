@@ -6,7 +6,7 @@ A full-stack, AI-enhanced calorie, macronutrient, and body weight progress track
 
 ## Features
 
-- **Production Authentication & Multi-Device Sessions**: Short-lived JWT access tokens + HttpOnly refresh token cookies with automatic rotation, strict zero-grace reuse revocation, multi-device management, and single-flight frontend retry.
+- **Production Authentication & Multi-Device Sessions**: Google Identity Services + Server-Side ID Token verification, Email/Password auth, Short-lived JWT access tokens + HttpOnly refresh token cookies with automatic rotation, strict zero-grace reuse revocation, multi-device management, and single-flight frontend retry.
 - **Mifflin-St Jeor TDEE & Target Engine**: Automatic calculation of BMR, TDEE, calorie deficit/surplus, and macronutrient targets based on user biometric profile and goals.
 - **Deterministic Food Tracking**: Comprehensive verified food catalog, search with debounce, granular meal logging (Breakfast, Lunch, Dinner, Snacks), and daily macro breakdown.
 - **Weight & Goal Progression**: Daily weight logging, starting weight historical protection, total weight change, and goal progress percentages.
@@ -19,8 +19,8 @@ A full-stack, AI-enhanced calorie, macronutrient, and body weight progress track
 
 ## Tech Stack
 
-- **Frontend**: React 18, TypeScript, Vite, Tailwind CSS, Lucide Icons, React Router v7
-- **Backend**: Node.js, Express.js, TypeScript, Prisma ORM, Helmet, Zod, bcryptjs, jsonwebtoken, cookie-parser, cors
+- **Frontend**: React 18, TypeScript, Vite, Tailwind CSS, Lucide Icons, React Router v7, Google Identity Services (GIS)
+- **Backend**: Node.js, Express.js, TypeScript, Prisma ORM, Helmet, Zod, bcryptjs, jsonwebtoken, google-auth-library, cookie-parser, cors
 - **Database**: PostgreSQL (Prisma ORM)
 - **AI**: Google Gen AI SDK (`@google/genai` / `gemini-3.5-flash`)
 
@@ -48,14 +48,14 @@ calorie-tracker/
 │       ├── schemas/         # Zod validation schemas
 │       ├── services/        # Deterministic domain calculations & AI logic
 │       ├── seeds/           # Development food dataset seed
-│       └── tests/           # 7 automated test suites (194+ assertions)
+│       └── tests/           # 8 automated test suites (200+ assertions)
 └── frontend/                # React + Vite Client
     ├── package.json
     ├── tsconfig.json
     ├── vite.config.ts
     ├── vercel.json          # SPA routing configuration
     └── src/
-        ├── components/      # UI modals, charts, navigation
+        ├── components/      # UI modals, charts, navigation, GoogleSignInButton
         ├── context/         # AuthContext with in-memory token & silent refresh
         ├── pages/           # Dashboard, Food, Progress, AI Log, Analytics, Coach
         └── services/        # Authenticated API client with 401 retry
@@ -80,9 +80,11 @@ CORS_ORIGIN=http://localhost:5173
 DATABASE_URL=postgresql://user:password@localhost:5432/calorietrack_db?sslmode=disable
 JWT_SECRET=your_long_random_jwt_secret_at_least_16_chars
 GEMINI_API_KEY=your_gemini_api_key
+GOOGLE_CLIENT_ID=your_google_oauth_client_id.apps.googleusercontent.com
 
 # In frontend/.env:
 VITE_API_URL=http://localhost:5000
+VITE_GOOGLE_CLIENT_ID=your_google_oauth_client_id.apps.googleusercontent.com
 ```
 
 ### 3. Setup Database & Seed Data
@@ -102,7 +104,7 @@ npm run dev
 
 ## Running Automated Tests
 
-Run the complete 7-suite test verification (194+ assertions):
+Run the complete 8-suite test verification (200+ assertions):
 ```bash
 cd backend
 npx tsx src/tests/session-auth.test.ts
@@ -112,6 +114,7 @@ npx tsx src/tests/ai-food.test.ts
 npx tsx src/tests/analytics.test.ts
 npx tsx src/tests/ai-coach.test.ts
 npx tsx src/tests/production-hardening.test.ts
+npx tsx src/tests/google-auth.test.ts
 ```
 
 ---
